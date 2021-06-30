@@ -40,10 +40,7 @@ class DFA {
   DFA* genPowerAutomata(int op) {
 	auto power = new DFA();
 	uint32_t size;
-	if (op <= 5)
-	  size = std::pow(states.size(), 2);
-	else
-	  size = std::pow(2, states.size());
+	size = std::pow(2, states.size());
 
 	std::vector<State*> includes;
 
