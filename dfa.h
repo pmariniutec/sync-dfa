@@ -193,7 +193,6 @@ class DFA {
 	std::string syncWord;
 
 	auto bfs = bfsForest();
-	std::cout << *bfs;
 
 	for (auto state : bfs->states) {
 	  for (auto transition : state->transitions) {

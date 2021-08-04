@@ -63,7 +63,6 @@ int main() {
 	}
 
 	auto powerDFA = dfa->genPowerAutomata();
-	std::cout << *powerDFA << '\n';
 
 	auto hasSynchronizingWord = powerDFA->hasSynchronizingWord();
 	std::cout << (hasSynchronizingWord ? "Si" : "No") << '\n';
