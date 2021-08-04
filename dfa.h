@@ -1,3 +1,4 @@
+#include <string>
 #include <vector>
 #include <iomanip>
 #include <algorithm>
@@ -11,12 +12,11 @@ class DFA {
  public:
   DFA() = default;
 
-  void createState(int name) {
-	// std::cout << "Creating new state: " << name << '\n';
+  void createState(std::string name) {
 	states.push_back(new State(name));
   }
 
-  void createTransition(int initialName, int finalName, int symbol) {
+  void createTransition(std::string initialName, std::string finalName, int symbol) {
 	State* initial = nullptr;
 	State* end = nullptr;
 
@@ -37,10 +37,10 @@ class DFA {
 	}
   }
 
-  DFA* genPowerAutomata(int op) {
+  // Now only generates singleton and pair states. (n * (n + 1)) / 2
+  DFA* genPowerAutomata() {
 	auto power = new DFA();
-	uint32_t size;
-	size = std::pow(2, states.size());
+	uint32_t size = states.size() * (states.size() + 1) / 2;
 
 	std::vector<State*> includes;
 
@@ -49,19 +49,18 @@ class DFA {
 	  power->states.back()->states.push_back(state);
 	}
 
-	for (uint32_t i = 0; i < size; ++i) {
-	  for (uint32_t j = 0; j < states.size(); ++j) {
-		if (i & (1 << j)) {
-		  includes.push_back(states[j]);
-		}
-	  }
-	  if (includes.size() < 2) {
+	for (uint32_t i = 0; i < states.size(); ++i) {
+	  for (uint32_t j = i + 1; j < states.size(); ++j) {
+		includes.push_back(states[i]);
+		includes.push_back(states[j]);
+
+		std::string name;
+		std::for_each(includes.begin(), includes.end(), [&](auto piece) { name += piece->name; });
+		power->createState(name);
+
+		std::copy(includes.begin(), includes.end(), std::back_inserter(power->states.back()->states));
 		includes.clear();
-		continue;
 	  }
-	  power->createState(i + states.size());
-	  std::copy(includes.begin(), includes.end(), std::back_inserter(power->states.back()->states));
-	  includes.clear();
 	}
 
 	std::vector<State*> point;
@@ -111,18 +110,43 @@ class DFA {
 	return power;
   }
 
-  DFA* bfs(int op) {
-	State* root;
-	DFA* powerDFA = genPowerAutomata(op);
+  bool bfs(State* starting) {
+	std::map<std::string, bool> visited;
 	for (auto state : states) {
-	  root = state;
+	  visited.emplace(state->name, false);
 	}
 
-	auto bfs = new DFA();
-	auto size = powerDFA->states.size();
+	std::queue<State*> q;
+	auto curr = starting;
+	q.push(curr);
 
-	std::map<int, bool> visited;
-	for (auto state : powerDFA->states) {
+	while (!q.empty()) {
+	  curr = q.front();
+	  q.pop();
+	  if (!visited[curr->name]) {
+		for (auto transition : curr->transitions) {
+		  if (transition->end->states.size() == 1) {
+			return true;
+		  }
+
+		  if (!visited[transition->end->name]) {
+			q.push(transition->end);
+		  }
+		}
+		visited[curr->name] = true;
+	  }
+	}
+
+	return false;
+  }
+
+  DFA* bfsForest() {
+	auto root = states.back();
+
+	auto bfs = new DFA();
+
+	std::map<std::string, bool> visited;
+	for (auto state : states) {
 	  visited.emplace(state->name, false);
 	}
 
@@ -136,14 +160,11 @@ class DFA {
 	  if (!visited[curr->name]) {
 		bool exists = false;
 		for (auto state : bfs->states) {
-		  if (state->name == curr->name) {
+		  if (state->name == curr->name)
 			exists = true;
-		  }
 		}
-		if (!exists) {
+		if (!exists && curr->states.size() == 2)
 		  bfs->createState(curr->name);
-		}
-		visited[curr->name] = true;
 
 		for (auto transition : curr->transitions) {
 		  if (!visited[transition->end->name]) {
@@ -154,52 +175,44 @@ class DFA {
 				exists = true;
 			  }
 			}
-			if (!exists) {
+			if (!exists && curr->states.size() == 2) {
 			  bfs->createState(transition->end->name);
 			  bfs->createTransition(curr->name, transition->end->name, transition->symbol);
 			}
 		  }
 		}
+
+		visited[curr->name] = true;
 	  }
 	}
+
 	return bfs;
   }
 
-  bool hasSingletons(State* singleton) {
-	for (auto state : states) {
-	  if (state->name == singleton->name && state->states.size() == 2) {
-		return true;
-	  }
-	}
-	return false;
-  }
-
-  std::string synchronizingWord(DFA* bfs) {
+  std::string synchronizingWord(DFA* base) {
 	std::string syncWord;
+
+	auto bfs = bfsForest();
+	std::cout << *bfs;
 
 	for (auto state : bfs->states) {
 	  for (auto transition : state->transitions) {
-		if (state->transitions.size() == 1) {
-		  if (!hasSingletons(state)) {
-			syncWord = syncWord + std::to_string(transition->symbol);
-		  }
-		}
+		auto tPrime = std::to_string(transition->symbol);
+		syncWord += tPrime;
 	  }
 	}
+
 	return syncWord;
   }
 
   bool hasSynchronizingWord() {
 	for (auto state : states) {
-	  if (state->states.size() == 3) {
-		for (auto transition : state->transitions) {
-		  if (transition->end->states.size() == 2) {
-			return true;
-		  }
-		}
+	  if (state->states.size() == 2) {
+		if (!bfs(state))
+		  return false;
 	  }
 	}
-	return false;
+	return true;
   }
 
   friend std::ostream& operator<<(std::ostream& out, DFA& dfa) {

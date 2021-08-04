@@ -15,12 +15,12 @@ class Transition {
 
 class State {
  public:
-  int name;
+  std::string name;
   std::vector<Transition*> transitions;
   std::vector<State*> states;
 
   State() = default;
-  State(int n) : name{ n } {}
+  State(std::string n) : name{ n } {}
 
   void addTransition(State* start, State* end, int symbol) {
 	transitions.push_back(new Transition(start, end, symbol));
