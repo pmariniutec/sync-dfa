@@ -15,10 +15,10 @@ int main() {
 	std::vector<int> w;
 	std::vector<int> b;
 
+	std::cin >> n;
+
 	std::vector<std::vector<int>> rW(n);
 	std::vector<std::vector<int>> rB(n);
-
-	std::cin >> n;
 
 	for (int i = 0; i < n; ++i) {
 	  int tmp;
